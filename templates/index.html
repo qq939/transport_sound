@@ -1,48 +1,109 @@
-<!doctype html>
-<html lang="zh-CN">
+<!DOCTYPE html>
+<html lang="zh">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Mr.Jiang</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr.Jiang</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            z-index: 10;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px #0f0;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        #latency-panel {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            font-size: 14px;
+            color: #0f0;
+            z-index: 10;
+            text-shadow: 0 0 2px #0f0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            padding: 5px 15px;
+            margin-left: 10px;
+            cursor: pointer;
+            text-shadow: 0 0 2px #0f0;
+            box-shadow: 0 0 2px #0f0;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        button:disabled {
+            border-color: #050;
+            color: #050;
+            text-shadow: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        
+        #visualizer-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 200px;
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <img class="logo" src="{{ url_for('static', filename='logo.svg') }}" alt="logo">
-    <h1 class="title">Mr.Jiang</h1>
-  </div>
-  <script>
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const sr = 48000;
-    const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: sr });
-    (async () => {
-      const ws = new WebSocket(`${proto}://${location.host}/ws`);
-      ws.binaryType = 'arraybuffer';
-      ws.onopen = () => ctx.resume();
-      const queue = [];
-      const proc = ctx.createScriptProcessor(2048, 0, 1);
-      proc.onaudioprocess = ev => {
-        const out = ev.outputBuffer.getChannelData(0);
-        let offset = 0;
-        while (offset < out.length) {
-          if (queue.length === 0) {
-            while (offset < out.length) out[offset++] = 0;
-            break;
-          }
-          let buf = queue[0];
-          const n = Math.min(out.length - offset, buf.length);
-          out.set(buf.subarray(0, n), offset);
-          offset += n;
-          if (n < buf.length) queue[0] = buf.subarray(n);
-          else queue.shift();
-        }
-      };
-      proc.connect(ctx.destination);
-      ws.onmessage = e => {
-        queue.push(new Float32Array(e.data));
-      };
-    })();
-    window.addEventListener('pointerdown', () => ctx.resume(), { once: true });
-  </script>
+    <div id="logo">Mr.Jiang</div>
+    
+    <div id="controls">
+        <button id="btn-play">[ RECEIVE STREAM ]</button>
+        <button id="btn-stop">[ STOP STREAM ]</button>
+    </div>
+
+    <div id="latency-panel">
+        LATENCY: <span id="latency-val">--</span> ms
+    </div>
+    
+    <div id="visualizer-container">
+        <canvas id="visualizer"></canvas>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
 </body>
 </html>

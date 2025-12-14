@@ -1,34 +1,95 @@
+import sounddevice as sd
+import numpy as np
 from flask import Flask, render_template
 from flask_sock import Sock
-import sounddevice as sd
-import queue
+import threading
+import logging
+import time
+import struct
 
 app = Flask(__name__)
 sock = Sock(app)
 
-SR = 48000
+# Audio settings
+SAMPLE_RATE = 44100
 CHANNELS = 1
-BLOCK_SIZE = 1024
+BLOCK_SIZE = 2048  # 2048/44100 ~= 46ms
+
+# Global list to hold connected clients
+clients = []
+clients_lock = threading.Lock()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def audio_callback(indata, frames, time_info, status):
+    """Callback function for audio stream."""
+    if status:
+        logger.warning(f"Audio status: {status}")
+    
+    # Get current server time
+    server_time = time.time()
+    
+    # Prepare payload: Timestamp (double, 8 bytes) + Audio Data (int16 bytes)
+    # We use Little Endian '<d' for timestamp to match typical PC/WASM.
+    timestamp_bytes = struct.pack('<d', server_time)
+    audio_bytes = indata.tobytes()
+    payload = timestamp_bytes + audio_bytes
+    
+    # Broadcast to all connected clients
+    with clients_lock:
+        to_remove = []
+        for ws in clients:
+            try:
+                # Send binary payload
+                ws.send(payload)
+            except Exception as e:
+                # logger.error(f"Error sending to client: {e}")
+                to_remove.append(ws)
+        
+        for ws in to_remove:
+            if ws in clients:
+                clients.remove(ws)
+
+def start_recording():
+    """Starts the audio recording stream."""
+    try:
+        # Use int16 for lower bandwidth
+        with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, 
+                            dtype='int16', blocksize=BLOCK_SIZE, 
+                            callback=audio_callback):
+            logger.info(f"Microphone listening at {SAMPLE_RATE}Hz...")
+            while True:
+                sd.sleep(1000)
+    except Exception as e:
+        logger.error(f"Failed to start recording: {e}")
+
+# Start recording in a separate thread
+recording_thread = threading.Thread(target=start_recording, daemon=True)
+recording_thread.start()
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@sock.route('/ws')
+@sock.route('/audio')
 def audio(ws):
-    q = queue.Queue(maxsize=20)
-    def cb(indata, frames, time, status):
-        try:
-            q.put_nowait(indata.copy())
-        except queue.Full:
-            pass
-    with sd.InputStream(samplerate=SR, channels=CHANNELS, blocksize=BLOCK_SIZE, dtype='float32', callback=cb):
+    with clients_lock:
+        clients.append(ws)
+    logger.info(f"Client connected. Total: {len(clients)}")
+    try:
         while True:
-            try:
-                chunk = q.get()
-                ws.send(chunk.tobytes())
-            except Exception:
-                break
+            # Keep connection alive
+            data = ws.receive()
+    except Exception as e:
+        pass
+    finally:
+        with clients_lock:
+            if ws in clients:
+                clients.remove(ws)
+        logger.info(f"Client disconnected. Total: {len(clients)}")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Listen on all interfaces
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
