@@ -1,3 +1,5 @@
 flask
 flask-sock
 sounddevice
+numpy
+websocket-client

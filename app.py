@@ -6,6 +6,7 @@ import threading
 import logging
 import time
 import struct
+import json
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -14,6 +15,7 @@ sock = Sock(app)
 SAMPLE_RATE = 44100
 CHANNELS = 1
 BLOCK_SIZE = 2048  # 2048/44100 ~= 46ms
+DTYPE = 'int16'
 
 # Global list to hold connected clients
 clients = []
@@ -57,15 +59,19 @@ def start_recording():
     try:
         # Use int16 for lower bandwidth
         with sd.InputStream(samplerate=SAMPLE_RATE, channels=CHANNELS, 
-                            dtype='int16', blocksize=BLOCK_SIZE, 
+                            dtype=DTYPE, blocksize=BLOCK_SIZE, 
                             callback=audio_callback):
             logger.info(f"Microphone listening at {SAMPLE_RATE}Hz...")
             while True:
                 sd.sleep(1000)
     except Exception as e:
         logger.error(f"Failed to start recording: {e}")
+        # Retry or exit? Let's retry after a delay
+        time.sleep(5)
+        start_recording()
 
 # Start recording in a separate thread
+# Note: We only start it once.
 recording_thread = threading.Thread(target=start_recording, daemon=True)
 recording_thread.start()
 
@@ -80,7 +86,8 @@ def audio(ws):
     logger.info(f"Client connected. Total: {len(clients)}")
     try:
         while True:
-            # Keep connection alive
+            # Keep connection alive, wait for any message (e.g. ping)
+            # Or just block reading.
             data = ws.receive()
     except Exception as e:
         pass
@@ -92,4 +99,5 @@ def audio(ws):
 
 if __name__ == '__main__':
     # Listen on all interfaces
+    # threaded=True is default for Flask > 1.0, but good to be explicit for simple dev server
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

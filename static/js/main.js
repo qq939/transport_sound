@@ -1,191 +1,208 @@
-const canvas = document.getElementById('visualizer');
-const ctx = canvas.getContext('2d');
+// Mr.Jiang Audio Stream Client
+
 const btnPlay = document.getElementById('btn-play');
 const btnStop = document.getElementById('btn-stop');
 const latencyVal = document.getElementById('latency-val');
+const canvas = document.getElementById('visualizer');
+const canvasCtx = canvas.getContext('2d');
 
-let audioContext;
-let audioWorkletNode;
-let analyser;
-let ws;
-let isAudioStarted = false;
-let isManuallyStopped = false;
+let audioCtx = null;
+let workletNode = null;
+let ws = null;
+let isPlaying = false;
+let analyser = null;
+let drawVisual = null;
 
+// Adjust canvas size
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = 200;
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-async function initAudio() {
-    if (isAudioStarted) return;
-    
-    try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioContext = new AudioContext({
-            sampleRate: 44100, // Match server
-            latencyHint: 'interactive'
-        });
+btnPlay.addEventListener('click', startStream);
+btnStop.addEventListener('click', stopStream);
 
-        // Load the worklet from the correct path
-        await audioContext.audioWorklet.addModule('/static/worklet-processor.js');
+async function startStream() {
+    if (isPlaying) return;
+
+    try {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 44100,
+                latencyHint: 'interactive'
+            });
+        }
         
-        audioWorkletNode = new AudioWorkletNode(audioContext, 'pcm-player');
-        analyser = audioContext.createAnalyser();
+        if (audioCtx.state === 'suspended') {
+            await audioCtx.resume();
+        }
+
+        // Add AudioWorklet module
+        await audioCtx.audioWorklet.addModule('/static/worklet-processor.js');
+
+        // Create Worklet Node
+        workletNode = new AudioWorkletNode(audioCtx, 'pcm-player');
+        
+        // Create Analyser for visualization
+        analyser = audioCtx.createAnalyser();
         analyser.fftSize = 2048;
         
-        audioWorkletNode.connect(analyser);
-        analyser.connect(audioContext.destination);
+        // Connect: Worklet -> Analyser -> Destination
+        workletNode.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        // Start Visualization
+        visualize();
+
+        // Connect WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/audio`;
         
-        isAudioStarted = true;
-        isManuallyStopped = false;
-        updateButtonState(true);
-        connectWebSocket();
-        drawVisualizer();
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'arraybuffer';
         
-    } catch (e) {
-        console.error("Audio init failed", e);
-        alert("Audio init failed: " + e.message);
+        ws.onopen = () => {
+            console.log('Connected to server');
+            isPlaying = true;
+            updateUI(true);
+        };
+        
+        ws.onmessage = (event) => {
+            if (!isPlaying) return;
+            
+            // Parse payload: 8 bytes timestamp + Audio Data
+            const arrayBuffer = event.data;
+            const dataView = new DataView(arrayBuffer);
+            const timestamp = dataView.getFloat64(0, true); // Little Endian
+            
+            // Audio data starts at offset 8
+            // It's Int16, so we need to convert to Float32 [-1.0, 1.0]
+            const audioInt16 = new Int16Array(arrayBuffer, 8);
+            const audioFloat32 = new Float32Array(audioInt16.length);
+            
+            for (let i = 0; i < audioInt16.length; i++) {
+                audioFloat32[i] = audioInt16[i] / 32768.0;
+            }
+            
+            // Send to Worklet
+            workletNode.port.postMessage({
+                timestamp: timestamp,
+                audioData: audioFloat32
+            });
+            
+            // Calculate Latency (assuming synchronized clocks or localhost)
+            // timestamp is in seconds (float)
+            const now = Date.now() / 1000.0;
+            const latency = (now - timestamp) * 1000; // ms
+            
+            latencyVal.textContent = latency.toFixed(1);
+            
+            // Color code latency
+            if (latency < 700) {
+                latencyVal.style.color = '#0f0';
+            } else {
+                latencyVal.style.color = '#f00';
+            }
+        };
+        
+        ws.onclose = () => {
+            console.log('Disconnected');
+            stopStream();
+        };
+        
+        ws.onerror = (err) => {
+            console.error('WebSocket Error:', err);
+            stopStream();
+        };
+
+    } catch (err) {
+        console.error('Error starting stream:', err);
+        alert('Failed to start audio stream. See console for details.');
     }
 }
 
-function updateButtonState(playing) {
-    if (playing) {
-        btnPlay.disabled = true;
-        btnStop.disabled = false;
-        btnPlay.innerText = "RECEIVING...";
-    } else {
-        btnPlay.disabled = false;
-        btnStop.disabled = true;
-        btnPlay.innerText = "[ RECEIVE STREAM ]";
-        latencyVal.innerText = "--";
-    }
-}
-
-function stopAudio() {
-    isManuallyStopped = true;
+function stopStream() {
+    if (!isPlaying) return;
+    
     if (ws) {
         ws.close();
         ws = null;
     }
-    if (audioContext) {
-        audioContext.close();
-        audioContext = null;
+    
+    if (workletNode) {
+        workletNode.disconnect();
+        workletNode = null;
     }
-    isAudioStarted = false;
-    audioWorkletNode = null;
-    updateButtonState(false);
+    
+    if (analyser) {
+        analyser.disconnect();
+        analyser = null;
+    }
+    
+    isPlaying = false;
+    updateUI(false);
+    
+    // Clear canvas
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (drawVisual) {
+        cancelAnimationFrame(drawVisual);
+    }
+    latencyVal.textContent = '--';
 }
 
-function connectWebSocket() {
-    if (isManuallyStopped) return;
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use /audio to match app.py
-    ws = new WebSocket(`${protocol}//${window.location.host}/audio`);
-    ws.binaryType = 'arraybuffer';
+function updateUI(playing) {
+    btnPlay.disabled = playing;
+    btnStop.disabled = !playing;
     
-    ws.onopen = () => {
-        console.log("WS Connected");
-    };
-    
-    ws.onclose = () => {
-        if (!isManuallyStopped) {
-            console.log("WS Closed, retrying...");
-            setTimeout(connectWebSocket, 2000);
-        }
-    };
-    
-    ws.onerror = (e) => {
-        console.error("WS Error", e);
-    };
-    
-    ws.onmessage = (event) => {
-        if (!isAudioStarted || !audioWorkletNode) return;
-        
-        const rawData = event.data;
-        if (rawData.byteLength <= 8) return; 
-        
-        const dataView = new DataView(rawData);
-        // Read timestamp (Little Endian)
-        const serverTime = dataView.getFloat64(0, true);
-        const clientTime = Date.now() / 1000.0;
-        const latency = clientTime - serverTime;
-        
-        // Update UI occasionally
-        if (Math.random() < 0.1) {
-             const ms = (latency * 1000).toFixed(0);
-             latencyVal.innerText = ms;
-             if (latency > 0.7) {
-                 latencyVal.style.color = '#f00';
-             } else {
-                 latencyVal.style.color = '#0f0';
-             }
-        }
-        
-        // Extract Audio Data (skip first 8 bytes)
-        // Server sends int16. We need float32 for AudioWorklet.
-        const int16Data = new Int16Array(rawData.slice(8));
-        const float32Data = new Float32Array(int16Data.length);
-        
-        for (let i = 0; i < int16Data.length; i++) {
-            float32Data[i] = int16Data[i] / 32768.0;
-        }
-        
-        // Post data AND timestamp to worklet
-        audioWorkletNode.port.postMessage({
-            timestamp: serverTime,
-            audioData: float32Data
-        });
-    };
+    if (playing) {
+        btnPlay.innerHTML = '[ STREAMING... ]';
+    } else {
+        btnPlay.innerHTML = '[ RECEIVE STREAM ]';
+    }
 }
 
-function drawVisualizer() {
-    if (!isAudioStarted) return;
-    requestAnimationFrame(drawVisualizer);
-    
+function visualize() {
     if (!analyser) return;
     
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     
-    analyser.getByteTimeDomainData(dataArray);
-    
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#0f0';
-    ctx.beginPath();
-    
-    const sliceWidth = canvas.width * 1.0 / bufferLength;
-    let x = 0;
-    
-    for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * canvas.height / 2;
+    function draw() {
+        if (!isPlaying) return;
         
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
+        drawVisual = requestAnimationFrame(draw);
+        
+        analyser.getByteTimeDomainData(dataArray);
+        
+        canvasCtx.fillStyle = '#000'; // Black background
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        canvasCtx.lineWidth = 2;
+        canvasCtx.strokeStyle = '#0f0'; // Green line
+        
+        canvasCtx.beginPath();
+        
+        const sliceWidth = canvas.width * 1.0 / bufferLength;
+        let x = 0;
+        
+        for(let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = v * canvas.height / 2;
+            
+            if(i === 0) {
+                canvasCtx.moveTo(x, y);
+            } else {
+                canvasCtx.lineTo(x, y);
+            }
+            
+            x += sliceWidth;
         }
         
-        x += sliceWidth;
+        canvasCtx.lineTo(canvas.width, canvas.height/2);
+        canvasCtx.stroke();
     }
     
-    ctx.lineTo(canvas.width, canvas.height / 2);
-    ctx.stroke();
+    draw();
 }
-
-btnPlay.addEventListener('click', async () => {
-    await initAudio();
-});
-
-btnStop.addEventListener('click', () => {
-    stopAudio();
-});
-
-// Initial State
-updateButtonState(false);
