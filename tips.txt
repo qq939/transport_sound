@@ -1,0 +1,31 @@
+VSCode(macOS)常用快捷键与代码补全技巧：
+
+- 通用
+  - Command + P：快速打开文件
+  - Command + Shift + P：打开命令面板
+  - Command + /：切换行注释
+  - Option + Shift + F：格式化代码
+  - Command + B：切换侧边栏
+  - Command + \：分屏编辑
+  - Command + W：关闭当前编辑器
+
+- 多光标编辑
+  - Option + Click：创建额外光标
+  - Option + Shift + Drag：框选列编辑
+  - Command + Option + Up/Down：在上下行添加光标
+  - Command + D：选中下一个相同单词
+
+- 导航
+  - F12：转到定义
+  - Option + F12：在预览中查看定义
+  - Command + Click：跳转到引用/定义
+
+- 终端与Git
+  - Control + `：打开集成终端
+  - 在源代码管理面板可直接stage/commit/push
+
+- 代码补全
+  - 输入函数或变量前几个字母后按 Tab 或 Enter 接受建议
+  - 使用 IntelliSense（Control + Space）显示建议列表
+  - 启用 Snippets，可通过输入前缀后 Tab 展开模板（如 `def`+Tab 生成Python函数模板）
+  - 借助Emmet在HTML/CSS中快速生成结构（如 `div.container>ul>li*3` + Tab）
