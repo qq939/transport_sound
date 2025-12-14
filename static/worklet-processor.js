@@ -3,10 +3,21 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
     super();
     this.queue = [];
     this.buffer = new Float32Array(0);
+    // 最多缓冲约200ms的音频，超过则丢弃旧数据以保持实时性
+    this.maxBufferedSamples = Math.floor(sampleRate * 0.2);
     this.port.onmessage = e => {
       const data = e.data;
       if (data && data.length) {
-        this.queue.push(data);
+        // 计算当前待播放的样本数量
+        let pending = this.buffer.length;
+        for (let i = 0; i < this.queue.length; i++) pending += this.queue[i].length;
+        if (pending > this.maxBufferedSamples) {
+          // 积压过多：直接清空旧队列，仅保留最新数据，实现“追帧”
+          this.buffer = new Float32Array(0);
+          this.queue = [data];
+        } else {
+          this.queue.push(data);
+        }
       }
     };
   }
