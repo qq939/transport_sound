@@ -88,6 +88,7 @@ def analyze():
         return jsonify({"error": "No sentence provided"}), 400
     
     result = assistant.analyze_sentence(sentence)
+    print(result, flush=True)
     return jsonify(result)
 
 @app.route('/api/submit_quiz', methods=['POST'])
