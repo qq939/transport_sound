@@ -12,3 +12,5 @@ User Request: 把需要用到的模块写到requirements.txt里面
 Fix ModuleNotFoundError: Replace langchain_core.pydantic_v1 with pydantic
 2025年12月15日 星期一 18时53分31秒 CST
 更新LangChain功能：图片描述测验模式
+2025年12月15日 星期一 19时14分08秒 CST
+UI优化：移除音频可视化波形图区域

@@ -9,5 +9,16 @@
       "expense",
       "strategy"
     ]
+  },
+  {
+    "timestamp": 1765796036.602109,
+    "sentence": "Today's salary of 100,000 yuan has been credited to the account, and the reimbursement of 573.5 yuan for the strategy expenses has also been credited, with the current strategy goal of 63.87% favorability, please keep up the good work.",
+    "source": "Business or financial context document",
+    "vocabulary": {
+      "credited": 1,
+      "reimbursement": 1,
+      "strategy": 1,
+      "favorability": 1
+    }
   }
 ]

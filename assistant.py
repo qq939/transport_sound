@@ -13,12 +13,12 @@ dotenv.load_dotenv()
 # Define data structure for output parsing
 class WordInfo(BaseModel):
     word: str = Field(description="The difficult word")
-    meaning: str = Field(description="The correct Chinese meaning of the word")
-    options: List[str] = Field(description="4 options including the correct meaning and 3 confusing options")
+    meaning: str = Field(description="The correct Chinese meaning of the word in the origin sentance")
+    options: List[str] = Field(description="4 options including the correct meaning and 3 confusing optional wrong meanings")
 
 class AnalysisResult(BaseModel):
     words: List[WordInfo] = Field(description="List of difficult vocabulary words (IELTS level), max 4 words.")
-    source_guess: str = Field(description="A guess of the exact source")
+    source_guess: str = Field(description="A guess of the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx)")
 
 class Assistant:
     def __init__(self, history_file="langchain_history.json"):
