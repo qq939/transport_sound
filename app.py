@@ -6,7 +6,7 @@ import threading
 import logging
 import time
 import struct
-import json
+import os
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -98,6 +98,9 @@ def audio(ws):
         logger.info(f"Client disconnected. Total: {len(clients)}")
 
 if __name__ == '__main__':
-    # Listen on all interfaces
-    # threaded=True is default for Flask > 1.0, but good to be explicit for simple dev server
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    cert_path = os.path.join(os.path.dirname(__file__), 'cert', 'cert.pem')
+    key_path = os.path.join(os.path.dirname(__file__), 'cert', 'key.pem')
+    ssl_ctx = None
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        ssl_ctx = (cert_path, key_path)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=ssl_ctx)
