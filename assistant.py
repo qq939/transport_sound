@@ -12,9 +12,9 @@ dotenv.load_dotenv()
 
 # Define data structure for output parsing
 class WordInfo(BaseModel):
-    word: str = Field(description="The difficult word")
-    meaning: str = Field(description="The correct Chinese meaning of the word in the origin sentance")
-    options: List[str] = Field(description="4 options including the correct meaning and 3 wrong meanings like an english quiz")
+    word: str = Field(description="The difficult English word")
+    meaning: str = Field(description="The correct meaning of the difficult English word in the origin sentance")
+    options: List[str] = Field(description="4 options, all are wrong meanings of the difficult English word")
 
 class AnalysisResult(BaseModel):
         # - If no word replaced, return an empty list
@@ -67,11 +67,10 @@ class Assistant:
         parser = JsonOutputParser(pydantic_object=AnalysisResult)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an English language expert. Analyze the given sentence."),
-            ("rules", "CRITICAL: Ensure the 'meaning' field is EXACTLY present in the 'options' list.\n"
-                     "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text.\n\n"),
+            ("system", "You are an English language expert. Analyze the given sentence.\n"
+                       "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text."),
             ("user", "Extract up to 4 difficult vocabulary words (English word in the sentence, IELTS level) from the following sentence.\n"
-                     "For each word, provide its correct Chinese meaning and 3 wrong meanings like an english quiz as 'options'.\n"
+                     "For each word, provide its correct meaning and 4 wrong meanings as 'options'.\n"
                      "Also find out the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
                      "Sentence: {sentence}\n\n"
                      "{format_instructions}")
