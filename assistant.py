@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import time
@@ -115,7 +116,7 @@ class Assistant:
             return {
                 "words": words_info,
                 "source": source_guess,
-                "timestamp": time.time(),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "sentence": sentence
             }
 
@@ -129,7 +130,7 @@ class Assistant:
         quiz_data: {
             "sentence": str,
             "source": str,
-            "timestamp": float,
+            "timestamp": str, # Formatted string
             "results": [
                 {"word": str, "is_correct": bool}
             ]
@@ -138,7 +139,11 @@ class Assistant:
         sentence = quiz_data.get("sentence")
         source = quiz_data.get("source")
         timestamp = quiz_data.get("timestamp")
+        if not timestamp:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         results = quiz_data.get("results", [])
+
         
         # Filter words that were answered incorrectly
         wrong_words = {}

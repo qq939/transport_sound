@@ -323,7 +323,7 @@ function displayAnalysisResult(data) {
                 html += `[${word}] also appeared in:`;
                 html += `<ul style="margin: 5px 0 10px 20px; padding: 0;">`;
                 matches.forEach(m => {
-                    const dateStr = new Date(m.timestamp * 1000).toLocaleString();
+                    const dateStr = m.timestamp; // Now already a formatted string
                     html += `<li>"${m.sentence.substring(0, 30)}..." (Source: ${m.source || 'Unknown'}) @ ${dateStr}</li>`;
                 });
                 html += `</ul>`;
