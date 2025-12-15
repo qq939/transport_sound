@@ -3,3 +3,5 @@ flask-sock
 sounddevice
 numpy
 websocket-client
+langchain
+langchain-openai

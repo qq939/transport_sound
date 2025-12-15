@@ -1,12 +1,13 @@
 import sounddevice as sd
 import numpy as np
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 from flask_sock import Sock
 import threading
 import logging
 import time
 import struct
 import os
+from assistant import assistant
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -78,6 +79,16 @@ recording_thread.start()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    data = request.json
+    sentence = data.get('sentence')
+    if not sentence:
+        return jsonify({"error": "No sentence provided"}), 400
+    
+    result = assistant.analyze_sentence(sentence)
+    return jsonify(result)
 
 @sock.route('/audio')
 def audio(ws):

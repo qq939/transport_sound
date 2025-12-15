@@ -18,6 +18,10 @@ let buffer = new Float32Array(0);
 let lastTimestamp = 0;
 const maxQueueLength = 10;
 
+const btnSubmit = document.getElementById('btn-submit');
+const sentenceInput = document.getElementById('sentence-input');
+const logsContent = document.getElementById('logs-content');
+
 // Adjust canvas size
 function resizeCanvas() {
     canvas.width = canvas.parentElement.clientWidth;
@@ -28,6 +32,125 @@ resizeCanvas();
 
 btnPlay.addEventListener('click', startStream);
 btnStop.addEventListener('click', stopStream);
+
+// New Event Listeners for Assistant
+btnSubmit.addEventListener('click', submitSentence);
+sentenceInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        submitSentence();
+    }
+});
+
+async function submitSentence() {
+    const sentence = sentenceInput.value.trim();
+    if (!sentence) return;
+
+    // UI Feedback
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '[ 分析中... ]';
+    
+    // Add user log entry immediately
+    addLogEntry(sentence, "user");
+
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sentence: sentence })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            if (data.error) {
+                addLogEntry("Error: " + data.error, "system");
+            } else {
+                displayAnalysisResult(data);
+            }
+        } else {
+            addLogEntry("Server Error: " + (data.error || response.statusText), "system");
+        }
+
+    } catch (err) {
+        console.error("Submission error:", err);
+        addLogEntry("Network Error: " + err.message, "system");
+    } finally {
+        // Reset UI
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '[ 提交识别 ]';
+        sentenceInput.value = '';
+    }
+}
+
+function addLogEntry(text, type) {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    if (type === "user") {
+        entry.innerHTML = `<div class="log-sentence" style="color: #0f0;">> ${text}</div>`;
+    } else {
+        entry.innerHTML = `<div class="log-sentence" style="color: #f00;">System: ${text}</div>`;
+    }
+    
+    logsContent.prepend(entry);
+}
+
+function displayAnalysisResult(data) {
+    // data structure: 
+    // { 
+    //   current_analysis: { words: [], source: "", timestamp: ... }, 
+    //   history_matches: { "word": [ {sentence, source, timestamp}, ... ] } 
+    // }
+    
+    const analysis = data.current_analysis;
+    const history = data.history_matches || {};
+    
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    // 1. Sentence
+    let html = `<div class="log-sentence" style="color: #fff;">${analysis.words.length > 0 ? "Analysis Result:" : "No difficult words found."}</div>`;
+    
+    // 2. Vocabulary
+    if (analysis.words && analysis.words.length > 0) {
+        html += `<div class="vocab-list">Difficult Words (IELTS): `;
+        
+        analysis.words.forEach(word => {
+            const matches = history[word];
+            const hasHistory = matches && matches.length > 0;
+            const tooltipTitle = hasHistory ? `Found in ${matches.length} past sentences` : "New word";
+            
+            html += `<span class="vocab-item" title="${tooltipTitle}">${word}</span>`;
+        });
+        
+        html += `</div>`;
+        
+        // 3. Detailed History
+        Object.keys(history).forEach(word => {
+            const matches = history[word];
+            if (matches && matches.length > 0) {
+                html += `<div class="history-info">`;
+                html += `[${word}] also appeared in:`;
+                html += `<ul style="margin: 5px 0 10px 20px; padding: 0;">`;
+                matches.forEach(m => {
+                    const dateStr = new Date(m.timestamp * 1000).toLocaleString();
+                    html += `<li>"${m.sentence.substring(0, 30)}..." (Source: ${m.source || 'Unknown'}) @ ${dateStr}</li>`;
+                });
+                html += `</ul>`;
+                html += `</div>`;
+            }
+        });
+    }
+
+    if (analysis.source && analysis.source !== "Unknown") {
+         html += `<div class="history-info">Guessed Source Style: ${analysis.source}</div>`;
+    }
+
+    entry.innerHTML = html;
+    logsContent.prepend(entry);
+}
 
 async function startStream() {
     if (isPlaying) return;
