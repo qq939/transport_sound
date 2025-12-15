@@ -6,3 +6,5 @@ User Request: 做一个app.py，实现一个低延时的web语音推送服务...
 部署自签名证书，启用HTTPS/WSS
 2025年12月15日 星期一 15时50分53秒 CST
 增加LangChain功能：输入句子提取难点词汇并保存历史
+2025年12月15日 星期一 16时41分43秒 CST
+User Request: 把需要用到的模块写到requirements.txt里面
