@@ -32,7 +32,7 @@ class Assistant:
         # If not present, this might raise an error when called.
         # Users should ensure env var is set or pass api_key explicitly if we extended this.
         try:
-            self.llm = ChatOpenAI(model="THUDM/glm-4-9b-chat", base_url="https://api.siliconflow.cn/v1", api_key=os.getenv("SILICONFLOW_API_KEY"))
+            self.llm = ChatOpenAI(model="deepseek-ai/DeepSeek-V3", base_url="https://api.siliconflow.cn/v1", api_key=os.getenv("SILICONFLOW_API_KEY"))
         except Exception as e:
             print(f"Warning: Failed to initialize ChatOpenAI. Ensure OPENAI_API_KEY is set. Error: {e}")
             self.llm = None
