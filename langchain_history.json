@@ -1,65 +1,10 @@
 [
   {
-    "timestamp": 1765793892.160077,
-    "sentence": "Today's salary of 100,000 yuan has been credited to the account, and the reimbursement of 573.5 yuan for the strategy expenses has also been credited, with the current strategy goal of 63.87% favorability, please keep up the good work.",
-    "source": "News",
-    "vocabulary": [
-      "reimbursement",
-      "favourability",
-      "expense",
-      "strategy"
-    ]
-  },
-  {
-    "timestamp": 1765796036.602109,
-    "sentence": "Today's salary of 100,000 yuan has been credited to the account, and the reimbursement of 573.5 yuan for the strategy expenses has also been credited, with the current strategy goal of 63.87% favorability, please keep up the good work.",
-    "source": "Business or financial context document",
+    "timestamp": 1765820644.5626712,
+    "sentence": "And a career break, with full attendance bonus and year-end bonus, missing a day means losing a hundred million yuan. 一点都不带夸张的。 Not exaggerating at all. 作为一名有觉悟、有理想、有抱负的职场牛马，在经历了四号客户的闪婚后，他就有了居安思危的危机意识。 As a conscious, idealistic, and ambitious workplace bull, after the flash marriage of client No.4, he developed a sense of crisis. 舔狗这种职业，失业是说来就来。 Being a bootlicker, unemployment can come any time. 人无远虑，必有近忧。 A lack of foresight spells trouble down the road. 五号客户两个月前就和一个小鲜肉隐婚了，我该怎么办？ Client No.5 secretly married a young hunk two months ago, What should I do?",
+    "source": "Unclear, could be from a business or motivational article focused on career and work-life balance.",
     "vocabulary": {
-      "credited": 1,
-      "reimbursement": 1,
-      "strategy": 1,
-      "favorability": 1
-    }
-  },
-  {
-    "timestamp": 1765797387.799781,
-    "sentence": "走了，下班。 It's time to go home. 跨上电瓶车，戴好头盔，付航冲着保安潇洒地一挥手，在保安看傻子一样的眼神中，融进了夜色。 He hopped on his scooter, put on his helmet, and waved goodbye to the security guard. Amid the security guard's stunned gaze, he blended into the night.",
-    "source": "ulanbator_fdtp/ulanbator_fdtp_20230714.bag",
-    "vocabulary": {
-      "��进": 1,
-      "潇洒": 1,
-      "眼神": 1,
-      "打发": 1
-    }
-  },
-  {
-    "timestamp": 1765797826.523891,
-    "sentence": "He has been pursuing her for three years, but her favorability for him remains at the bare minimum.",
-    "source": "Unknown",
-    "vocabulary": {
-      "favorability": 2,
-      "bare minimum": 1
-    }
-  },
-  {
-    "timestamp": 1765798072.413116,
-    "sentence": "才舔了三个月，就频频突破红线，搞得自己还要费脑子耍手段去消除好感。 After only three months of pursuing, he repeatedly crossed the line. I had to rack my brains and resort to tricks to eliminate his good feelings. 最后要不是有个富二代横空出世，一举夺下芳心，步入婚姻的殿堂，让系统完成结算，他还真有点担心三号客户会对自己产生非分之想。 If a rich second-generation hadn't emerged out of nowhere and won her heart, entering into marriage, allowing the system to complete the settlement, he would have been really worried that Client No.3 would have inappropriate thoughts about him. 从而影响他的工作以及稳定的收入。 Thus affecting his work and stable income.",
-    "source": "This appears to be an original sentence and not from a known source such as a TV show episode or book.",
-    "vocabulary": {
-      "eliminate": 1,
-      "shocking": 1,
-      "inappropriate": 1
-    }
-  },
-  {
-    "timestamp": 1765803429.195023,
-    "sentence": "even all factors that will affect his work, will be his lifelong enemies.",
-    "source": "not an exact source provided",
-    "vocabulary": {
-      "affect": 1,
-      "enemies": 1,
-      "lifelong": 1,
-      "factors": 1
+      "career": 1
     }
   }
 ]
