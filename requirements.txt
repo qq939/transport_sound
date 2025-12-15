@@ -6,3 +6,4 @@ websocket-client
 langchain
 langchain-openai
 langchain_core
+dotenv

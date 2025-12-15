@@ -6,11 +6,14 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
+import dotenv
+
+dotenv.load_dotenv()
 
 # Define data structure for output parsing
 class AnalysisResult(BaseModel):
     words: List[str] = Field(description="List of difficult vocabulary words (IELTS level), max 4 words.")
-    source_guess: str = Field(description="A guess of the source style/genre (e.g., Novel, Movie, News, etc.)")
+    source_guess: str = Field(description="A guess of the exact source")
 
 class Assistant:
     def __init__(self, history_file="langchain_history.json"):
@@ -20,7 +23,7 @@ class Assistant:
         # If not present, this might raise an error when called.
         # Users should ensure env var is set or pass api_key explicitly if we extended this.
         try:
-            self.llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+            self.llm = ChatOpenAI(model="THUDM/glm-4-9b-chat", base_url="https://api.siliconflow.cn/v1", api_key=os.getenv("SILICONFLOW_API_KEY"))
         except Exception as e:
             print(f"Warning: Failed to initialize ChatOpenAI. Ensure OPENAI_API_KEY is set. Error: {e}")
             self.llm = None
@@ -57,7 +60,7 @@ class Assistant:
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an English language expert. Analyze the given sentence."),
             ("user", "Extract up to 4 difficult vocabulary words (IELTS level) from the following sentence.\n"
-                     "Also guess the source genre (e.g., Novel, Movie, News, Daily Conversation).\n"
+                     "Also find out the exact source.\n"
                      "Return JSON format.\n\n"
                      "Sentence: {sentence}\n\n"
                      "{format_instructions}")
