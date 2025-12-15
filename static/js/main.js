@@ -8,10 +8,15 @@ const canvasCtx = canvas.getContext('2d');
 
 let audioCtx = null;
 let workletNode = null;
+let scriptProcessor = null;
 let ws = null;
 let isPlaying = false;
 let analyser = null;
 let drawVisual = null;
+let queue = [];
+let buffer = new Float32Array(0);
+let lastTimestamp = 0;
+const maxQueueLength = 10;
 
 // Adjust canvas size
 function resizeCanvas() {
@@ -39,18 +44,44 @@ async function startStream() {
             await audioCtx.resume();
         }
 
-        // Add AudioWorklet module
-        await audioCtx.audioWorklet.addModule('/static/worklet-processor.js');
-
-        // Create Worklet Node
-        workletNode = new AudioWorkletNode(audioCtx, 'pcm-player');
+        let useWorklet = false;
+        try {
+            await audioCtx.audioWorklet.addModule('/static/worklet-processor.js');
+            workletNode = new AudioWorkletNode(audioCtx, 'pcm-player');
+            useWorklet = true;
+        } catch (e) {
+            scriptProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
+            scriptProcessor.onaudioprocess = (ev) => {
+                const out = ev.outputBuffer.getChannelData(0);
+                let offset = 0;
+                while (offset < out.length) {
+                    if (buffer.length === 0) {
+                        if (queue.length === 0) {
+                            for (let i = 0; i < out.length; i++) out[i] = 0;
+                            break;
+                        } else {
+                            buffer = queue.shift();
+                        }
+                    }
+                    const need = out.length - offset;
+                    const avail = buffer.length;
+                    const n = Math.min(need, avail);
+                    out.set(buffer.subarray(0, n), offset);
+                    buffer = buffer.subarray(n);
+                    offset += n;
+                }
+            };
+        }
         
         // Create Analyser for visualization
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 2048;
         
-        // Connect: Worklet -> Analyser -> Destination
-        workletNode.connect(analyser);
+        if (workletNode) {
+            workletNode.connect(analyser);
+        } else if (scriptProcessor) {
+            scriptProcessor.connect(analyser);
+        }
         analyser.connect(audioCtx.destination);
 
         // Start Visualization
@@ -86,11 +117,23 @@ async function startStream() {
                 audioFloat32[i] = audioInt16[i] / 32768.0;
             }
             
-            // Send to Worklet
-            workletNode.port.postMessage({
-                timestamp: timestamp,
-                audioData: audioFloat32
-            });
+            if (workletNode) {
+                if (timestamp < lastTimestamp) {
+                    return;
+                }
+                lastTimestamp = timestamp;
+                workletNode.port.postMessage({ timestamp, audioData: audioFloat32 });
+            } else if (scriptProcessor) {
+                if (timestamp < lastTimestamp) {
+                    return;
+                }
+                lastTimestamp = timestamp;
+                queue.push(audioFloat32);
+                if (queue.length > maxQueueLength) {
+                    const dropCount = queue.length - 2;
+                    queue = queue.slice(dropCount);
+                }
+            }
             
             // Calculate Latency (assuming synchronized clocks or localhost)
             // timestamp is in seconds (float)
@@ -134,6 +177,11 @@ function stopStream() {
     if (workletNode) {
         workletNode.disconnect();
         workletNode = null;
+    }
+    if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor.onaudioprocess = null;
+        scriptProcessor = null;
     }
     
     if (analyser) {
