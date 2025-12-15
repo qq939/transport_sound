@@ -90,6 +90,15 @@ def analyze():
     result = assistant.analyze_sentence(sentence)
     return jsonify(result)
 
+@app.route('/api/submit_quiz', methods=['POST'])
+def submit_quiz():
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    result = assistant.submit_quiz_result(data)
+    return jsonify(result)
+
 @sock.route('/audio')
 def audio(ws):
     with clients_lock:

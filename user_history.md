@@ -10,3 +10,5 @@ User Request: 做一个app.py，实现一个低延时的web语音推送服务...
 User Request: 把需要用到的模块写到requirements.txt里面
 2025年12月15日 星期一 16时58分08秒 CST
 Fix ModuleNotFoundError: Replace langchain_core.pydantic_v1 with pydantic
+2025年12月15日 星期一 18时53分31秒 CST
+更新LangChain功能：图片描述测验模式

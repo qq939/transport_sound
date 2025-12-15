@@ -11,8 +11,13 @@ import dotenv
 dotenv.load_dotenv()
 
 # Define data structure for output parsing
+class WordInfo(BaseModel):
+    word: str = Field(description="The difficult word")
+    meaning: str = Field(description="The correct Chinese meaning of the word")
+    options: List[str] = Field(description="4 options including the correct meaning and 3 confusing options")
+
 class AnalysisResult(BaseModel):
-    words: List[str] = Field(description="List of difficult vocabulary words (IELTS level), max 4 words.")
+    words: List[WordInfo] = Field(description="List of difficult vocabulary words (IELTS level), max 4 words.")
     source_guess: str = Field(description="A guess of the exact source")
 
 class Assistant:
@@ -49,7 +54,8 @@ class Assistant:
 
     def analyze_sentence(self, sentence: str) -> Dict[str, Any]:
         """
-        Analyzes the sentence to extract difficult vocabulary and save to history.
+        Analyzes the sentence to extract difficult vocabulary and generate quiz options.
+        Does NOT save to history yet. History is updated after quiz submission.
         """
         if not self.llm:
             return {"error": "LLM not initialized. Check API Key."}
@@ -60,6 +66,7 @@ class Assistant:
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an English language expert. Analyze the given sentence."),
             ("user", "Extract up to 4 difficult vocabulary words (IELTS level) from the following sentence.\n"
+                     "For each word, provide its correct Chinese meaning and 3 other confusing Chinese meanings as options.\n"
                      "Also find out the exact source.\n"
                      "Return JSON format.\n\n"
                      "Sentence: {sentence}\n\n"
@@ -74,35 +81,98 @@ class Assistant:
                 "format_instructions": parser.get_format_instructions()
             })
             
-            words = result.get("words", [])
+            # words is now a list of dicts (WordInfo)
+            words_info = result.get("words", [])
             source_guess = result.get("source_guess", "Unknown")
             
-            # 2. Check history for these words
-            history_matches = self._find_word_history(words)
-
-            # 3. Save current entry to history
-            timestamp = time.time()
-            new_entry = {
-                "timestamp": timestamp,
-                "sentence": sentence,
-                "source": source_guess, # Using the guessed source or user input if we had it
-                "vocabulary": words
-            }
-            self.history.append(new_entry)
-            self._save_history()
-
             return {
-                "current_analysis": {
-                    "words": words,
-                    "source": source_guess,
-                    "timestamp": timestamp
-                },
-                "history_matches": history_matches
+                "words": words_info,
+                "source": source_guess,
+                "timestamp": time.time(),
+                "sentence": sentence
             }
 
         except Exception as e:
             print(f"Error during analysis: {e}")
             return {"error": str(e)}
+
+    def submit_quiz_result(self, quiz_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Processes the quiz result.
+        quiz_data: {
+            "sentence": str,
+            "source": str,
+            "timestamp": float,
+            "results": [
+                {"word": str, "is_correct": bool}
+            ]
+        }
+        """
+        sentence = quiz_data.get("sentence")
+        source = quiz_data.get("source")
+        timestamp = quiz_data.get("timestamp")
+        results = quiz_data.get("results", [])
+        
+        # Filter words that were answered incorrectly
+        wrong_words = {}
+        all_correct = True
+        
+        for res in results:
+            if not res.get("is_correct"):
+                all_correct = False
+                word = res.get("word")
+                # Get current count from history or init to 0
+                current_count = self._get_word_error_count(word)
+                wrong_words[word] = current_count + 1
+        
+        if all_correct:
+            return {"status": "success", "message": "All correct! No history saved."}
+        
+        # If there are wrong words, save to history
+        new_entry = {
+            "timestamp": timestamp,
+            "sentence": sentence,
+            "source": source,
+            "vocabulary": wrong_words # Dict[word, count]
+        }
+        
+        self.history.append(new_entry)
+        self._save_history()
+        
+        return {"status": "success", "message": "History saved with error counts.", "saved_entry": new_entry}
+
+    def _get_word_error_count(self, word: str) -> int:
+        """
+        Calculates the total error count for a word from history.
+        Note: The user requirement implies 'accumulated error count'.
+        However, the structure is a list of entries.
+        We can sum up the counts or take the last one.
+        Assuming 'vocabulary' in history entry is { "word": count }.
+        We will search for the latest count or sum them up?
+        The requirement says: "reimbursement" :错误计数（历史累计）
+        So we should probably find the previous total count.
+        """
+        total_count = 0
+        word_lower = word.lower()
+        
+        for entry in self.history:
+            vocab = entry.get("vocabulary", {})
+            # vocab can be a list (old format) or dict (new format)
+            if isinstance(vocab, list):
+                continue # Skip old format
+            
+            for w, count in vocab.items():
+                if w.lower() == word_lower:
+                    # We assume the history stores the count at that moment.
+                    # Or does it store the increment?
+                    # Let's assume we want to know the *latest* accumulated count.
+                    # But simpler approach: count how many times it appeared in history?
+                    # No, the JSON example shows "count" as value.
+                    # So let's look for the Max existing count in history?
+                    if isinstance(count, int) and count > total_count:
+                        total_count = count
+        
+        return total_count
 
     def _find_word_history(self, words: List[str]) -> Dict[str, List[Dict]]:
         """

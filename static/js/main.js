@@ -21,6 +21,12 @@ const maxQueueLength = 10;
 const btnSubmit = document.getElementById('btn-submit');
 const sentenceInput = document.getElementById('sentence-input');
 const logsContent = document.getElementById('logs-content');
+const stagingArea = document.getElementById('staging-area');
+
+// Quiz State
+let currentQuizData = null;
+let currentQuizResults = [];
+let currentWordIndex = 0;
 
 // Adjust canvas size
 function resizeCanvas() {
@@ -49,8 +55,13 @@ async function submitSentence() {
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '[ 分析中... ]';
     
-    // Add user log entry immediately
-    addLogEntry(sentence, "user");
+    // Show staging area
+    stagingArea.style.display = 'block';
+    stagingArea.textContent = sentence;
+    stagingArea.style.color = '#0f0'; // Normal color
+    
+    // Clear log area
+    logsContent.innerHTML = '';
 
     try {
         const response = await fetch('/api/analyze', {
@@ -67,7 +78,7 @@ async function submitSentence() {
             if (data.error) {
                 addLogEntry("Error: " + data.error, "system");
             } else {
-                displayAnalysisResult(data);
+                startQuiz(data);
             }
         } else {
             addLogEntry("Server Error: " + (data.error || response.statusText), "system");
@@ -82,6 +93,183 @@ async function submitSentence() {
         btnSubmit.innerHTML = '[ 提交识别 ]';
         sentenceInput.value = '';
     }
+}
+
+function startQuiz(data) {
+    currentQuizData = data;
+    currentQuizResults = [];
+    currentWordIndex = 0;
+    
+    // data structure: { words: [{word, meaning, options}], source: "", timestamp: ..., sentence: "" }
+    
+    if (!data.words || data.words.length === 0) {
+        // No difficult words, directly finish
+        finishQuiz();
+        return;
+    }
+    
+    showNextWordCard();
+}
+
+function showNextWordCard() {
+    if (currentWordIndex >= currentQuizData.words.length) {
+        finishQuiz();
+        return;
+    }
+    
+    const wordInfo = currentQuizData.words[currentWordIndex];
+    const options = shuffleArray([...wordInfo.options]);
+    
+    // Create Card UI in logsContent
+    const card = document.createElement('div');
+    card.className = 'log-entry';
+    card.style.border = '1px solid #0f0';
+    card.style.padding = '10px';
+    card.style.margin = '10px 0';
+    
+    let html = `<div style="font-size: 20px; color: #fff; margin-bottom: 10px;">Quiz: ${wordInfo.word}</div>`;
+    html += `<div style="font-size: 14px; color: #aaa; margin-bottom: 10px;">Select the correct meaning:</div>`;
+    
+    // Options
+    options.forEach((opt, idx) => {
+        html += `<button class="quiz-option" data-opt="${opt}" style="display:block; width:100%; text-align:left; margin:5px 0; padding:8px; border:1px solid #050; background:transparent; color:#0f0; cursor:pointer;">${idx + 1}. ${opt}</button>`;
+    });
+    
+    logsContent.innerHTML = ''; // Clear previous
+    logsContent.appendChild(card);
+    card.innerHTML = html;
+    
+    // Add listeners
+    const btns = card.querySelectorAll('.quiz-option');
+    btns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const selected = e.target.getAttribute('data-opt');
+            const isCorrect = selected === wordInfo.meaning;
+            
+            currentQuizResults.push({
+                word: wordInfo.word,
+                isCorrect: isCorrect,
+                selected: selected,
+                correctMeaning: wordInfo.meaning
+            });
+            
+            // Feedback
+            if (isCorrect) {
+                e.target.style.background = '#050';
+                e.target.innerHTML += ' ✅';
+            } else {
+                e.target.style.background = '#500';
+                e.target.innerHTML += ' ❌';
+                // Highlight correct one
+                btns.forEach(b => {
+                    if (b.getAttribute('data-opt') === wordInfo.meaning) {
+                        b.style.background = '#050';
+                        b.style.innerHTML += ' (Correct)';
+                    }
+                });
+            }
+            
+            // Disable all
+            btns.forEach(b => b.disabled = true);
+            
+            // Next after delay
+            setTimeout(() => {
+                currentWordIndex++;
+                showNextWordCard();
+            }, 1500);
+        });
+    });
+}
+
+async function finishQuiz() {
+    // Calculate results
+    const resultsPayload = {
+        sentence: currentQuizData.sentence,
+        source: currentQuizData.source,
+        timestamp: currentQuizData.timestamp,
+        results: currentQuizResults.map(r => ({
+            word: r.word,
+            is_correct: r.isCorrect
+        }))
+    };
+    
+    logsContent.innerHTML = '<div class="log-entry" style="color:#0f0;">Submitting results...</div>';
+    
+    try {
+        const response = await fetch('/api/submit_quiz', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(resultsPayload)
+        });
+        
+        const data = await response.json();
+        
+        // Show Final Summary
+        displayFinalSummary(data);
+        
+    } catch (err) {
+        console.error("Quiz submission error:", err);
+        addLogEntry("Quiz Submission Error: " + err.message, "system");
+    }
+}
+
+function displayFinalSummary(responseData) {
+    logsContent.innerHTML = '';
+    
+    // 1. Show Sentence in logs
+    addLogEntry(currentQuizData.sentence, "user");
+    
+    // 2. Show Staging Area (highlight wrong words if any)
+    let sentenceHtml = currentQuizData.sentence;
+    const wrongWords = currentQuizResults.filter(r => !r.isCorrect).map(r => r.word);
+    
+    // Simple replace for highlighting (case insensitive)
+    wrongWords.forEach(w => {
+        const regex = new RegExp(`\\b${w}\\b`, 'gi');
+        sentenceHtml = sentenceHtml.replace(regex, `<span style="color:#f00; border-bottom:1px dashed #f00;">$&</span>`);
+    });
+    
+    stagingArea.innerHTML = sentenceHtml;
+    stagingArea.style.color = wrongWords.length > 0 ? '#fff' : '#0f0';
+    
+    // 3. Show Result Log
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    let html = `<div class="log-sentence" style="color: #fff;">Analysis Result:</div>`;
+    
+    if (currentQuizData.words.length > 0) {
+        html += `<div class="vocab-list">Difficult Words (IELTS): `;
+        currentQuizData.words.forEach(w => {
+            const isWrong = wrongWords.includes(w.word);
+            const style = isWrong ? 'color:#f00; border-bottom:1px solid #f00;' : 'color:#0f0;';
+            html += `<span class="vocab-item" style="${style}" title="${w.meaning}">${w.word}</span>`;
+        });
+        html += `</div>`;
+    } else {
+        html += `<div class="vocab-list">No difficult words found.</div>`;
+    }
+    
+    if (currentQuizData.source && currentQuizData.source !== "Unknown") {
+         html += `<div class="history-info">Guessed Source Style: ${currentQuizData.source}</div>`;
+    }
+    
+    if (responseData.message) {
+        html += `<div class="history-info" style="margin-top:10px;">Server: ${responseData.message}</div>`;
+    }
+    
+    entry.innerHTML = html;
+    logsContent.appendChild(entry);
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 }
 
 function addLogEntry(text, type) {

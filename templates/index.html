@@ -194,9 +194,13 @@
         <canvas id="visualizer"></canvas>
     </div>
 
+    <!-- Staging Area for Recognized Text -->
+    <div id="staging-area" style="padding: 20px; border-bottom: 1px solid #0f0; color: #f00; font-size: 24px; text-align: center; display: none;">
+        提交识别以后，待识别的文字就暂存在这里
+    </div>
+
     <div id="input-area">
-        <div style="color: #0f0; margin-bottom: 5px;">音轨</div>
-        <input type="text" id="sentence-input" placeholder="输入句子，按回车或提交按钮返回给后端变量sentence..." autocomplete="off">
+        <input type="text" id="sentence-input" placeholder="输入句子..." autocomplete="off">
         <div id="input-controls">
             <button id="btn-submit">[ 提交识别 ]</button>
         </div>
