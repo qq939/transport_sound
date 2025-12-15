@@ -8,3 +8,5 @@ User Request: 做一个app.py，实现一个低延时的web语音推送服务...
 增加LangChain功能：输入句子提取难点词汇并保存历史
 2025年12月15日 星期一 16时41分43秒 CST
 User Request: 把需要用到的模块写到requirements.txt里面
+2025年12月15日 星期一 16时58分08秒 CST
+Fix ModuleNotFoundError: Replace langchain_core.pydantic_v1 with pydantic
