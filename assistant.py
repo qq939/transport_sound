@@ -68,11 +68,11 @@ class Assistant:
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an English language expert. Analyze the given sentence."),
+            ("rules", "CRITICAL: Ensure the 'meaning' field is EXACTLY present in the 'options' list.\n"
+                     "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text.\n\n"),
             ("user", "Extract up to 4 difficult vocabulary words (English word in the sentence, IELTS level) from the following sentence.\n"
                      "For each word, provide its correct Chinese meaning and 3 wrong meanings like an english quiz as 'options'.\n"
-                     "CRITICAL: Ensure the 'meaning' field is EXACTLY present in the 'options' list.\n"
                      "Also find out the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
-                     "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text.\n\n"
                      "Sentence: {sentence}\n\n"
                      "{format_instructions}")
         ])
