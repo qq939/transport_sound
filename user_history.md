@@ -14,3 +14,5 @@ Fix ModuleNotFoundError: Replace langchain_core.pydantic_v1 with pydantic
 更新LangChain功能：图片描述测验模式
 2025年12月15日 星期一 19时14分08秒 CST
 UI优化：移除音频可视化波形图区域
+2025年12月15日 星期一 20时36分10秒 CST
+修复Bug：重置AudioContext和缓冲区以解决无声问题

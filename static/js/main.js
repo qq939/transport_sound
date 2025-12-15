@@ -331,6 +331,11 @@ function displayAnalysisResult(data) {
 async function startStream() {
     if (isPlaying) return;
 
+    // Reset state variables
+    queue = [];
+    buffer = new Float32Array(0);
+    lastTimestamp = 0;
+
     try {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)({
@@ -473,6 +478,11 @@ function stopStream() {
         scriptProcessor.disconnect();
         scriptProcessor.onaudioprocess = null;
         scriptProcessor = null;
+    }
+    
+    if (audioCtx) {
+        audioCtx.close().catch(err => console.error("Error closing AudioContext:", err));
+        audioCtx = null;
     }
     
     isPlaying = false;

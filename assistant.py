@@ -14,10 +14,13 @@ dotenv.load_dotenv()
 class WordInfo(BaseModel):
     word: str = Field(description="The difficult word")
     meaning: str = Field(description="The correct Chinese meaning of the word in the origin sentance")
-    options: List[str] = Field(description="4 options including the correct meaning and 3 confusing optional wrong meanings")
+    options: List[str] = Field(description="4 options including the correct meaning and 3 confusing wrong meanings like an english quiz")
 
 class AnalysisResult(BaseModel):
-    words: List[WordInfo] = Field(description="List of difficult vocabulary words (IELTS level), max 4 words.")
+        # - If no word replaced, return an empty list
+        # - Drop words shorter than 6 chars
+        # - Drop words not nouns/verbs/adjectives, or overly basic beginner words
+    words: List[WordInfo] = Field(description="List of difficult vocabulary words (English word in the sentence, IELTS level), max 4 words.")
     source_guess: str = Field(description="A guess of the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx)")
 
 class Assistant:
@@ -65,9 +68,9 @@ class Assistant:
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an English language expert. Analyze the given sentence."),
-            ("user", "Extract up to 4 difficult vocabulary words (IELTS level) from the following sentence.\n"
-                     "For each word, provide its correct Chinese meaning and 3 other confusing Chinese meanings as options.\n"
-                     "Also find out the exact source.\n"
+            ("user", "Extract up to 4 difficult vocabulary words (English word in the sentence, IELTS level)from the following sentence.\n"
+                     "For each word, provide its correct Chinese meaning and and 3 confusing wrong meanings like an english quiz.\n"
+                     "Also find out the exact source((e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
                      "Return JSON format.\n\n"
                      "Sentence: {sentence}\n\n"
                      "{format_instructions}")
