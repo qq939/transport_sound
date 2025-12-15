@@ -3,12 +3,16 @@
 const btnPlay = document.getElementById('btn-play');
 const btnStop = document.getElementById('btn-stop');
 const latencyVal = document.getElementById('latency-val');
+const canvas = document.getElementById('visualizer');
+const canvasCtx = canvas.getContext('2d');
 
 let audioCtx = null;
 let workletNode = null;
 let scriptProcessor = null;
 let ws = null;
 let isPlaying = false;
+let analyser = null;
+let drawVisual = null;
 let queue = [];
 let buffer = new Float32Array(0);
 let lastTimestamp = 0;
@@ -23,6 +27,14 @@ const stagingArea = document.getElementById('staging-area');
 let currentQuizData = null;
 let currentQuizResults = [];
 let currentWordIndex = 0;
+
+// Adjust canvas size
+function resizeCanvas() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
 btnPlay.addEventListener('click', startStream);
 btnStop.addEventListener('click', stopStream);
@@ -377,11 +389,19 @@ async function startStream() {
             };
         }
         
+        // Create Analyser for visualization
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        
         if (workletNode) {
-            workletNode.connect(audioCtx.destination);
+            workletNode.connect(analyser);
         } else if (scriptProcessor) {
-            scriptProcessor.connect(audioCtx.destination);
+            scriptProcessor.connect(analyser);
         }
+        analyser.connect(audioCtx.destination);
+
+        // Start Visualization
+        visualize();
 
         // Connect WebSocket
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -480,6 +500,11 @@ function stopStream() {
         scriptProcessor = null;
     }
     
+    if (analyser) {
+        analyser.disconnect();
+        analyser = null;
+    }
+    
     if (audioCtx) {
         audioCtx.close().catch(err => console.error("Error closing AudioContext:", err));
         audioCtx = null;
@@ -488,6 +513,11 @@ function stopStream() {
     isPlaying = false;
     updateUI(false);
     
+    // Clear canvas
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    if (drawVisual) {
+        cancelAnimationFrame(drawVisual);
+    }
     latencyVal.textContent = '--';
 }
 
@@ -500,4 +530,48 @@ function updateUI(playing) {
     } else {
         btnPlay.innerHTML = '[ RECEIVE STREAM ]';
     }
+}
+
+function visualize() {
+    if (!analyser) return;
+    
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    function draw() {
+        if (!isPlaying) return;
+        
+        drawVisual = requestAnimationFrame(draw);
+        
+        analyser.getByteTimeDomainData(dataArray);
+        
+        canvasCtx.fillStyle = '#000'; // Black background
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        canvasCtx.lineWidth = 2;
+        canvasCtx.strokeStyle = '#0f0'; // Green line
+        
+        canvasCtx.beginPath();
+        
+        const sliceWidth = canvas.width * 1.0 / bufferLength;
+        let x = 0;
+        
+        for(let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = v * canvas.height / 2;
+            
+            if(i === 0) {
+                canvasCtx.moveTo(x, y);
+            } else {
+                canvasCtx.lineTo(x, y);
+            }
+            
+            x += sliceWidth;
+        }
+        
+        canvasCtx.lineTo(canvas.width, canvas.height/2);
+        canvasCtx.stroke();
+    }
+    
+    draw();
 }

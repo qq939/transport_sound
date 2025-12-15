@@ -16,3 +16,5 @@ Fix ModuleNotFoundError: Replace langchain_core.pydantic_v1 with pydantic
 UI优化：移除音频可视化波形图区域
 2025年12月15日 星期一 20时36分10秒 CST
 修复Bug：重置AudioContext和缓冲区以解决无声问题
+2025年12月15日 星期一 20时42分34秒 CST
+UI调整：恢复并缩小顶部波形图，确保声音正常
