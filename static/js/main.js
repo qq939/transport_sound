@@ -62,6 +62,10 @@ async function submitSentence() {
     
     // Clear log area
     logsContent.innerHTML = '';
+    
+    // Clear token stats if any
+    const existingStats = document.getElementById('token-stats');
+    if (existingStats) existingStats.remove();
 
     try {
         const response = await fetch('/api/analyze', {
@@ -78,6 +82,10 @@ async function submitSentence() {
             if (data.error) {
                 addLogEntry("Error: " + data.error, "system");
             } else {
+                // Show Token Stats
+                if (data.token_usage) {
+                    showTokenStats(data.token_usage);
+                }
                 startQuiz(data);
             }
         } else {
@@ -92,6 +100,26 @@ async function submitSentence() {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = '[ 提交识别 ]';
         sentenceInput.value = '';
+    }
+}
+
+function showTokenStats(usage) {
+    // usage: { total_tokens, completion_tokens, prompt_tokens }
+    // Insert next to "日志" label in #log-area
+    
+    // Find the log area header div
+    const logHeader = document.querySelector('#log-area > div:first-child');
+    if (logHeader) {
+        // Create stats span
+        const statsSpan = document.createElement('span');
+        statsSpan.id = 'token-stats';
+        statsSpan.style.float = 'right';
+        statsSpan.style.fontSize = '12px';
+        statsSpan.style.color = '#aaa';
+        
+        statsSpan.innerHTML = `Tokens: Total ${usage.total_tokens || 0} (Prompt ${usage.prompt_tokens || 0}, Completion ${usage.completion_tokens || 0})`;
+        
+        logHeader.appendChild(statsSpan);
     }
 }
 

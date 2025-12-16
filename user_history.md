@@ -26,3 +26,5 @@ Fix Bug: Ensure correct meaning is always included in quiz options
 UI调整：隐藏顶部波形图容器边框
 2025年12月16日 星期二 11时11分47秒 CST
 UI调整：输入框和提交按钮放置在同一行
+2025年12月16日 星期二 12时31分53秒 CST
+功能新增：返回并显示 Token 使用统计 (Total, Prompt, Completion)
