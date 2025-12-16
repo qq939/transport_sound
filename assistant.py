@@ -68,12 +68,12 @@ class Assistant:
         parser = JsonOutputParser(pydantic_object=AnalysisResult)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an English language expert. Analyze the given sentence."),
-            ("user", "Extract up to 4 difficult vocabulary words (IELTS level) from the following sentence.\n"
-                     "For each word, provide its correct Chinese meaning and 3 other confusing Chinese meanings as options.\n"
-                     "CRITICAL: Ensure the 'meaning' field is EXACTLY present in the 'options' list.\n"
-                     "Also find out the exact source.\n"
-                     "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text.\n\n"
+            ("system", "You are an English teacher, and you are giving your students an English vocabulary test. \n"
+                       "IMPORTANT: Provide English words and Chinese meanings. \n"
+                       "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text."),
+            ("user", "Analyze the given sentence, and find up to 8 difficult English words and expressions (Preferably nouns/verbs/adjectives, and preferably longer and more difficult words) from the following sentence.\n"
+                     "For each word, provide its correct Chinese meaning and 4 wrong Chinese meanings as 'options'.\n"
+                     "Also find out the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
                      "Sentence: {sentence}\n\n"
                      "{format_instructions}")
         ])
@@ -103,6 +103,11 @@ class Assistant:
             for word_item in words_info:
                 meaning = word_item.get("meaning")
                 options = word_item.get("options", [])
+                print("meaning0",meaning,flush=True)
+                print("options0",options,flush=True)
+                
+                meaning = meaning.strip().replace(",",";").split(";")[0]
+                
                 
                 # Ensure meaning is in options
                 if meaning and options and meaning not in options:
@@ -113,6 +118,9 @@ class Assistant:
                     else:
                         options.append(meaning)
                     word_item["options"] = options
+                    word_item["meaning"] = meaning
+                    print("meaning1",meaning,flush=True)
+                    print("options1",options,flush=True)
             
             return {
                 "words": words_info,
