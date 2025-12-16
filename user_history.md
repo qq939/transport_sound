@@ -24,3 +24,5 @@ UI调整：缩小顶部右侧按钮和延迟面板的字体与间距，确保单
 Fix Bug: Ensure correct meaning is always included in quiz options
 2025年12月16日 星期二 01时48分10秒 CST
 UI调整：隐藏顶部波形图容器边框
+2025年12月16日 星期二 11时11分47秒 CST
+UI调整：输入框和提交按钮放置在同一行

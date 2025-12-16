@@ -109,10 +109,12 @@
             padding: 20px;
             border-bottom: 1px solid #0f0;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
         }
 
         #sentence-input {
-            width: 100%;
+            flex-grow: 1;
             background: transparent;
             border: none;
             border-bottom: 1px dashed #050;
@@ -121,6 +123,7 @@
             font-size: 18px;
             padding: 10px 0;
             outline: none;
+            margin-right: 10px;
         }
 
         #sentence-input:focus {
@@ -128,9 +131,7 @@
         }
 
         #input-controls {
-            margin-top: 10px;
-            display: flex;
-            justify-content: flex-end;
+            flex-shrink: 0;
         }
 
         /* Log/Result Area */
