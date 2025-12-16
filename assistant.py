@@ -13,15 +13,15 @@ dotenv.load_dotenv()
 
 # Define data structure for output parsing
 class WordInfo(BaseModel):
-    word: str = Field(description="The difficult English word")
-    meaning: str = Field(description="The correct Chinese meaning of the difficult English word in the origin sentance")
-    options: List[str] = Field(description="4 options, all are wrong Chinese meanings of the difficult English word")
+    word: str = Field(description="The difficult English word or expression")
+    meaning: str = Field(description="The correct Chinese meaning of the difficult English word or expression in the origin sentance")
+    options: List[str] = Field(description="4 options, all are wrong Chinese meanings of the difficult English word or expression")
 
 class AnalysisResult(BaseModel):
         # - If no word replaced, return an empty list
         # - Drop words shorter than 6 chars
         # - Drop words not nouns/verbs/adjectives, or overly basic beginner words
-    words: List[WordInfo] = Field(description="List of difficult vocabulary words, max 4 words.")
+    words: List[WordInfo] = Field(description="List of difficult vocabulary words and expressions.")
     source_guess: str = Field(description="A guess of the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx)")
 
 class Assistant:
@@ -71,7 +71,7 @@ class Assistant:
             ("system", "You are an English teacher, and you are giving your students an English vocabulary test. \n"
                        "IMPORTANT: Provide English words and Chinese meanings. \n"
                        "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text."),
-            ("user", "Analyze the given sentence, and find up to 4 difficult English words (Preferably nouns/verbs/adjectives, and preferably longer and more difficult words) from the following sentence.\n"
+            ("user", "Analyze the given sentence, and find up to 8 difficult English words and expressions (Preferably nouns/verbs/adjectives, and preferably longer and more difficult words) from the following sentence.\n"
                      "For each word, provide its correct Chinese meaning and 4 wrong Chinese meanings as 'options'.\n"
                      "Also find out the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
                      "Sentence: {sentence}\n\n"
