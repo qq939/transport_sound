@@ -206,21 +206,39 @@
                 }
 
                 let vocabHtml = '';
+                let wordsToHighlight = [];
+                
                 // Vocabulary can be dict (new) or list (old)
                 if (Array.isArray(entry.vocabulary)) {
                     // Old format: List[str]
                     vocabHtml = entry.vocabulary.join(', ');
-                } else if (typeof entry.vocabulary === 'object') {
+                    wordsToHighlight = [...entry.vocabulary];
+                } else if (entry.vocabulary && typeof entry.vocabulary === 'object') {
                     // New format: Dict[word, count]
                     vocabHtml = Object.keys(entry.vocabulary).map(w => `${w} (${entry.vocabulary[w]})`).join(', ');
+                    wordsToHighlight = Object.keys(entry.vocabulary);
                 }
+
+                // Highlight words in sentence
+                let sentenceHtml = entry.sentence;
+                // Sort by length desc to avoid partial replacement issues
+                wordsToHighlight.sort((a, b) => b.length - a.length);
+                
+                wordsToHighlight.forEach(word => {
+                    if (!word) return;
+                    // Escape special chars for regex
+                    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    // Try to match whole word
+                    const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+                    sentenceHtml = sentenceHtml.replace(regex, `<span style="color: #0f0; font-weight: bold;">$&</span>`);
+                });
 
                 div.innerHTML = `
                     <div class="entry-header">
                         <span>Time: ${ts}</span>
                         <span>Source: ${entry.source || 'Unknown'}</span>
                     </div>
-                    <div class="entry-sentence">${entry.sentence}</div>
+                    <div class="entry-sentence">${sentenceHtml}</div>
                     <div class="entry-vocab">Vocabulary: ${vocabHtml || 'None'}</div>
                 `;
                 listArea.appendChild(div);
