@@ -56,6 +56,48 @@ class Assistant:
         except Exception as e:
             print(f"Error saving history: {e}")
 
+    def get_history(self, start_date: str = None, end_date: str = None) -> List[Dict]:
+        """
+        Retrieves history entries, optionally filtered by date range (YYYY-MM-DD).
+        """
+        if not start_date and not end_date:
+            return self.history
+
+        filtered_history = []
+        start_ts = 0
+        end_ts = float('inf')
+
+        if start_date:
+            try:
+                start_ts = datetime.strptime(start_date, "%Y-%m-%d").timestamp()
+            except ValueError:
+                pass # Ignore invalid date
+        
+        if end_date:
+            try:
+                # Add 1 day to include the end date fully
+                end_ts = datetime.strptime(end_date, "%Y-%m-%d").timestamp() + 86400
+            except ValueError:
+                pass
+
+        for entry in self.history:
+            # Entry timestamp can be float (old) or str (new)
+            ts_val = entry.get("timestamp")
+            entry_ts = 0
+            
+            if isinstance(ts_val, (int, float)):
+                entry_ts = ts_val
+            elif isinstance(ts_val, str):
+                try:
+                    entry_ts = datetime.strptime(ts_val, "%Y-%m-%d %H:%M:%S").timestamp()
+                except ValueError:
+                    continue # Skip if format unknown
+            
+            if start_ts <= entry_ts < end_ts:
+                filtered_history.append(entry)
+                
+        return filtered_history
+
     def analyze_sentence(self, sentence: str) -> Dict[str, Any]:
         """
         Analyzes the sentence to extract difficult vocabulary and generate quiz options.

@@ -80,6 +80,18 @@ recording_thread.start()
 def index():
     return render_template('index.html')
 
+@app.route('/history')
+def history_page():
+    return render_template('history.html')
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    data = assistant.get_history(start_date, end_date)
+    return jsonify(data)
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     data = request.json
