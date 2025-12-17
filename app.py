@@ -8,6 +8,8 @@ import time
 import struct
 import os
 from assistant import assistant
+import datetime
+import random
 sentence_dict = {}
 idlist = []
 app = Flask(__name__)
