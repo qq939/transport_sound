@@ -1,6 +1,6 @@
 import sounddevice as sd
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_sock import Sock
 import threading
 import logging
@@ -78,7 +78,8 @@ recording_thread.start()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    auto_sentence = request.args.get('auto_sentence')
+    return render_template('index.html', auto_sentence=auto_sentence)
 
 @app.route('/history')
 def history_page():
@@ -91,6 +92,26 @@ def get_history():
     
     data = assistant.get_history(start_date, end_date)
     return jsonify(data)
+
+@app.route('/api/check_history', methods=['GET'])
+def check_history():
+    return jsonify(assistant.check_history())
+
+@app.route('/api/delete_word', methods=['POST'])
+def delete_word():
+    data = request.get_json(force=True, silent=True) or {}
+    word = data.get('word', '')
+    dry_run = bool(data.get('dry_run', False))
+    result = assistant.delete_word_from_history(word, dry_run=dry_run)
+    status = 200 if result.get('status') == 'success' else 400
+    return jsonify(result), status
+
+@app.route('/open/api/analyz', methods=['POST'])
+def open_api_analyze():
+    data = request.get_json(force=True, silent=True) or {}
+    sentence = data.get('sentence', '')
+
+    return redirect(url_for('index', auto_sentence=sentence), code=303)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():

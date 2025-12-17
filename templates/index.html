@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script id="auto-sentence" type="application/json">{{ auto_sentence | tojson | safe if auto_sentence else "null" }}</script>
     <title>Mr.Jiang</title>
     <style>
         body, html {
@@ -164,6 +165,56 @@
             margin-right: 15px;
             cursor: help;
             border-bottom: 1px dotted #0f0;
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .vocabbook-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px dashed #030;
+        }
+
+        .vocabbook-trash {
+            border: 1px solid #050;
+            color: #0f0;
+            background: transparent;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vocabbook-trash svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .vocabbook-trash:hover {
+            background: #0f0;
+            color: #000;
+            border-color: #0f0;
+        }
+
+        .vocabbook-word {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .vocabbook-count {
+            color: #0a0;
+            font-size: 12px;
         }
         
         .history-info {
@@ -221,10 +272,31 @@
     <div id="log-area">
         <div style="color: #0f0; border-bottom: 1px solid #0f0; padding-bottom: 5px; margin-bottom: 10px; display: flex; align-items: center;">
             <span style="font-size: 16px; font-weight: bold; margin-right: 15px;">日志</span>
-            <a href="/history" style="font-size: 12px; color: #0f0; text-decoration: none; border: 1px solid #050; padding: 2px 8px; margin-right: auto;">[ 历史日志 ]</a>
+            <div style="margin-left: 20px;">
+                <button id="tab-log" style="font-size: 12px; padding: 2px 8px; border-color:#0f0; color:#0f0; background:transparent;">[ 实时日志 ]</button>
+                <button id="tab-history" style="font-size: 12px; padding: 2px 8px; border-color:#050; color:#050; background:transparent; margin-left:5px;">[ 历史日志 ]</button>
+                <button id="tab-vocab" style="font-size: 12px; padding: 2px 8px; border-color:#050; color:#050; background:transparent; margin-left:5px;">[ 生词本 ]</button>
+            </div>
+            <span id="history-hint" style="font-size: 12px; margin-left: auto; color:#0a0;"></span>
         </div>
         <div id="logs-content">
             <!-- Logs will appear here -->
+        </div>
+        <div id="history-content" style="display:none; min-height:0; height:100%;">
+            <div id="history-filter" style="margin-bottom:10px; font-size:12px; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <span>Start:</span><input type="date" id="history-start" style="background:#000;border:1px solid #050;color:#0f0;">
+                <span>End:</span><input type="date" id="history-end" style="background:#000;border:1px solid #050;color:#0f0;">
+                <button id="history-filter-btn">[ Filter ]</button>
+                <button id="history-download-btn" style="margin-left:auto;">[ Download JSON ]</button>
+            </div>
+            <div id="history-list" style="overflow-y:auto; min-height:0;"></div>
+        </div>
+        <div id="vocab-content" style="display:none; min-height:0; height:100%;">
+            <div style="margin-bottom:10px; font-size:12px; display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                <button id="vocab-refresh-btn">[ Refresh ]</button>
+                <span id="vocab-hint" style="margin-left:auto; color:#0a0;"></span>
+            </div>
+            <div id="vocab-list" style="overflow-y:auto; min-height:0;"></div>
         </div>
     </div>
     

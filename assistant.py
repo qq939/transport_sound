@@ -281,5 +281,108 @@ class Assistant:
                 matches[word] = word_matches
         return matches
 
+    def check_history(self) -> List[Dict[str, Any]]:
+        history = self._load_history()
+
+        def to_ts(ts_val):
+            if isinstance(ts_val, (int, float)):
+                return float(ts_val)
+            if isinstance(ts_val, str):
+                try:
+                    return datetime.strptime(ts_val, "%Y-%m-%d %H:%M:%S").timestamp()
+                except ValueError:
+                    try:
+                        return datetime.fromisoformat(ts_val).timestamp()
+                    except ValueError:
+                        return None
+            return None
+
+        timed = []
+        for entry in history:
+            ts = to_ts(entry.get("timestamp"))
+            if ts is None:
+                continue
+            vocab = entry.get("vocabulary")
+            if not isinstance(vocab, dict):
+                continue
+            timed.append((ts, vocab))
+
+        timed.sort(key=lambda x: x[0])
+
+        latest_counts: Dict[str, Any] = {}
+        for _, vocab in timed:
+            for word, count in vocab.items():
+                if not word:
+                    continue
+                if isinstance(count, bool):
+                    continue
+                if isinstance(count, int):
+                    latest_counts[word] = count
+                elif isinstance(count, float):
+                    latest_counts[word] = int(count) if count.is_integer() else count
+
+        sorted_items = sorted(latest_counts.items(), key=lambda kv: kv[1], reverse=True)
+        return [{"word": w, "count": c} for w, c in sorted_items]
+
+    def delete_word_from_history(self, word: str, dry_run: bool = False) -> Dict[str, Any]:
+        target = (word or '').strip()
+        if not target:
+            return {"status": "error", "error": "No word provided"}
+
+        history = self._load_history()
+        target_lower = target.lower()
+        new_history = []
+        affected_entries = 0
+        removed_entries = 0
+        removed_vocab_items = 0
+
+        for entry in history:
+            vocab = entry.get('vocabulary')
+
+            if isinstance(vocab, dict):
+                keys_to_remove = [k for k in vocab.keys() if isinstance(k, str) and k.lower() == target_lower]
+                if keys_to_remove:
+                    affected_entries += 1
+                    for k in keys_to_remove:
+                        vocab.pop(k, None)
+                        removed_vocab_items += 1
+                if len(vocab) == 0:
+                    removed_entries += 1
+                    continue
+                entry['vocabulary'] = vocab
+                new_history.append(entry)
+                continue
+
+            if isinstance(vocab, list):
+                original_len = len(vocab)
+                filtered = [w for w in vocab if not (isinstance(w, str) and w.lower() == target_lower)]
+                if len(filtered) != original_len:
+                    affected_entries += 1
+                    removed_vocab_items += (original_len - len(filtered))
+                if len(filtered) == 0:
+                    removed_entries += 1
+                    continue
+                entry['vocabulary'] = filtered
+                new_history.append(entry)
+                continue
+
+            new_history.append(entry)
+
+        if not dry_run:
+            tmp_path = f"{self.history_file}.tmp"
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                json.dump(new_history, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, self.history_file)
+            self.history = new_history
+
+        return {
+            "status": "success",
+            "word": target,
+            "affected_entries": affected_entries,
+            "removed_entries": removed_entries,
+            "removed_vocab_items": removed_vocab_items,
+            "dry_run": dry_run,
+        }
+
 # Singleton instance or create new one in app
 assistant = Assistant()
