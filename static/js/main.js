@@ -18,6 +18,22 @@ let buffer = new Float32Array(0);
 let lastTimestamp = 0;
 const maxQueueLength = 10;
 
+// Adjust canvas size
+function resizeCanvas() {
+    if (!canvas || !canvas.parentElement) return;
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+if (btnPlay) {
+    btnPlay.addEventListener('click', startStream);
+}
+if (btnStop) {
+    btnStop.addEventListener('click', stopStream);
+}
+
 const btnSubmit = document.getElementById('btn-submit');
 const sentenceInput = document.getElementById('sentence-input');
 const logsContent = document.getElementById('logs-content');
