@@ -8,7 +8,7 @@ import time
 import struct
 import os
 from assistant import assistant
-import datetime
+from datetime import datetime
 import random
 sentence_dict = {}
 idlist = []
