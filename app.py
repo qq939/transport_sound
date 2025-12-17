@@ -110,8 +110,15 @@ def delete_word():
 def open_api_analyze():
     data = request.get_json(force=True, silent=True) or {}
     sentence = data.get('sentence', '')
+    sentence = sentence.strip().replace(r'\n', '').replace(r'\r', '')
+    sentence = sentence.replace(r'\\', r'')
+    sentence = sentence.replace(r'\"', r'"')
+    sentence = sentence.replace(r'\\n', r'\n')
+    sentence = sentence.replace(r'\\t', r'\t')
+    sentence = sentence.replace(r'\\s', r'\s')
+    sentence_url_encoded = sentence.replace(r'\n', r'%0A').replace(r'\t', r'%09').replace(r'\s', r'%20')
 
-    return redirect(url_for('index', auto_sentence=sentence), code=303)
+    return "http://teacher.dimond.top/analyze?sentence=" + sentence_url_encoded
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
