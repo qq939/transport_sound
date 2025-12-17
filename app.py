@@ -111,14 +111,13 @@ def open_api_analyze():
     data = request.get_json(force=True, silent=True) or {}
     sentence = data.get('sentence', '')
     sentence = sentence.strip().replace(r'\n', '').replace(r'\r', '')
-    sentence = sentence.replace(r'\\', r'')
-    sentence = sentence.replace(r'\"', r'"')
-    sentence = sentence.replace(r'\\n', r'\n')
-    sentence = sentence.replace(r'\\t', r'\t')
-    sentence = sentence.replace(r'\\s', r'\s')
+    # 处理sentence之后，与url"http://teacher.dimond.top?auto_sentence="拼接
     sentence_url_encoded = sentence.replace(r'\n', r'%0A').replace(r'\t', r'%09').replace(r'\s', r'%20')
-
+    # base64再编码
+    sentence_url_encoded = sentence_url_encoded.encode('utf-8').decode('utf-8')
     return "http://teacher.dimond.top?auto_sentence=" + sentence_url_encoded
+
+
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
