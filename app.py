@@ -118,7 +118,7 @@ def open_api_analyze():
     sentence = sentence.replace(r'\\s', r'\s')
     sentence_url_encoded = sentence.replace(r'\n', r'%0A').replace(r'\t', r'%09').replace(r'\s', r'%20')
 
-    return "http://teacher.dimond.top/analyze?sentence=" + sentence_url_encoded
+    return "http://teacher.dimond.top?auto_sentence=" + sentence_url_encoded
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
