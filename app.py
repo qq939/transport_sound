@@ -108,14 +108,70 @@ def delete_word():
 
 @app.route('/open/api/analyz', methods=['POST'])
 def open_api_analyze():
+    # 这个接口的用途：
+    # - 外部系统通过 POST JSON 传入一句/一段文本（sentence）
+    # - 服务端返回一个“可直接打开的 URL”
+    # - 打开该 URL 后，前端会读取 query 参数 auto_sentence，并自动触发分析流程
+    #
+    # 为什么你会看到“乱码 URL”：
+    # - 如果 sentence 里包含中文/特殊符号/换行，而我们把它“原样拼接进 URL”
+    #   浏览器/代理/日志系统会在不同编码之间转换，导致出现类似：
+    #   "46â€º â€¹ ç¬”è®°" 这种典型的 UTF-8 被按 Latin-1/CP1252 误解码的乱码
+    #
+    # 正确做法：
+    # 1) 先把 sentence 修复成尽量正常的人类可读文本（可选，但能消除常见 mojibake）
+    # 2) 再把 sentence 做 URL percent-encoding，确保最终 URL 只包含 ASCII
+    #    这样无论经过任何中间层，都不会出现“看起来像乱码”的问题
+
+    def _repair_mojibake(text: str) -> str:
+        """尽量把 UTF-8 被当成 Latin-1/CP1252 解码造成的乱码修复回来。
+
+        典型现象：
+        - “笔记” -> “ç¬”è®°”
+        - “›” -> “â€º”
+        """
+        if not isinstance(text, str):
+            return ''
+        original = text.strip()
+        if not original:
+            return ''
+
+        candidates = [original]
+        for enc in ('latin-1', 'cp1252'):
+            try:
+                candidates.append(original.encode(enc).decode('utf-8'))
+            except Exception:
+                pass
+
+        def score(s: str) -> int:
+            cjk = sum(1 for ch in s if '\u4e00' <= ch <= '\u9fff')
+            bad = (
+                s.count('Ã')
+                + s.count('â')
+                + s.count('�')
+                + s.count('å')
+                + s.count('ç')
+                + s.count('æ')
+                + s.count('è')
+                + s.count('é')
+                + s.count('ï')
+            )
+            return cjk * 5 - bad * 3
+
+        return max(candidates, key=score)
+
     data = request.get_json(force=True, silent=True) or {}
-    sentence = data.get('sentence', '')
-    sentence = sentence.strip().replace(r'\n', '').replace(r'\r', '')
-    # 处理sentence之后，与url"http://teacher.dimond.top?auto_sentence="拼接
-    sentence_url_encoded = sentence.replace(r'\n', r'%0A').replace(r'\t', r'%09').replace(r'\s', r'%20')
-    # base64再编码
-    sentence_url_encoded = sentence_url_encoded.encode('utf-8').decode('utf-8')
-    return "http://teacher.dimond.top?auto_sentence=" + sentence_url_encoded
+    sentence = _repair_mojibake(data.get('sentence', '')).strip()
+
+    if not sentence:
+        return jsonify({"error": "No sentence provided"}), 400
+
+    # 把任意字符（包括中文、空格、换行、冒号等）编码成 URL 安全的 ASCII 形式。
+    # 例如："10:40" 仍然是 "10%3A40"，避免在任何链路中被误解析。
+    encoded = quote(sentence, safe='')
+
+
+    return f"http://teacher.dimond.top?auto_sentence={encoded}"
 
 
 
