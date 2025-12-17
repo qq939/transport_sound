@@ -161,7 +161,7 @@ def open_api_analyze():
         return max(candidates, key=score)
 
     data = request.get_json(force=True, silent=True) or {}
-    sentence = _repair_mojibake(data.get('sentence', '')).strip()
+    sentence = _repair_mojibake(data.get('sentence', '')).strip().replace(r'\n', '').replace(r'\r', '')
 
     if not sentence:
         return jsonify({"error": "No sentence provided"}), 400
