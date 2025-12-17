@@ -82,10 +82,14 @@ function highlightSentence(sentence, words) {
 function initHistoryView() {
     if (!historyList || !historyStart || !historyEnd) return;
     if (!historyStart.value || !historyEnd.value) {
-        const today = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
         const lastMonth = new Date();
-        lastMonth.setDate(today.getDate() - 30);
-        historyEnd.valueAsDate = today;
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+        lastMonth.setDate(lastMonth.getDate() - 1);
+        
+        historyEnd.valueAsDate = tomorrow;
         historyStart.valueAsDate = lastMonth;
     }
     loadHistoryData();
