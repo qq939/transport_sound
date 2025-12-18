@@ -110,10 +110,11 @@ class Assistant:
         parser = JsonOutputParser(pydantic_object=AnalysisResult)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an English teacher, and you are giving your students an English vocabulary test. \n"
+            ("system", "You are an English teacher giving an English vocabulary test to your IELTS/TOEFL candidates, who boast solid English proficiency and are far from being beginners.\n"
+                       "You only choose the longer and more difficult English words in the given sentence, preferablly nouns/verbs/adjectives/phrases)"
                        "IMPORTANT: Provide English words and Chinese meanings. \n"
                        "IMPORTANT: Return ONLY PURE JSON. Do NOT include comments (like //), markdown blocks (```json), or any other text."),
-            ("user", "Analyze the given sentence, and find up to 8 difficult English words and expressions (Preferably nouns/verbs/adjectives, and preferably longer and more difficult words) from the following sentence.\n"
+            ("user", "Analyze the given sentence, and find up to 8 difficult English words and expressions from the following sentence.\n"
                      "For each word, provide its correct Chinese meaning and 4 wrong Chinese meanings as 'options'.\n"
                      "Also find out the exact source(e.g. this is a line from Friends Season 1, Episode 12 at 5 minute 13 second, and at that time xxxx).\n"
                      "Sentence: {sentence}\n\n"
