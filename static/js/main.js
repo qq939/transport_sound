@@ -69,13 +69,88 @@ function escapeRegExp(str) {
 }
 
 function highlightSentence(sentence, words) {
-    let html = escapeHtml(sentence || '');
-    const list = (Array.isArray(words) ? words : []).filter(Boolean).sort((a, b) => b.length - a.length);
+    if (!sentence) return '';
+    let text = String(sentence);
+    // Find all matches ranges
+    // Range: {start, end}
+    let ranges = [];
+
+    const list = (Array.isArray(words) ? words : []).filter(Boolean);
+    
+    // Helper to add ranges
+    const addRanges = (keyword) => {
+        if (!keyword || keyword.length < 2) return; // Skip too short
+        const escaped = escapeRegExp(keyword);
+        // Try to match whole word if possible, but fallback to substring
+        // Using word boundary for start might be good, but end might be punctuation
+        // Let's try simple substring match first, case insensitive
+        const regex = new RegExp(escaped, 'gi');
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            ranges.push({start: match.index, end: match.index + match[0].length});
+        }
+    };
+
     list.forEach(word => {
-        const escaped = escapeRegExp(word);
-        const regex = new RegExp(`(^|[^A-Za-z0-9_])(${escaped})(?=[^A-Za-z0-9_]|$)`, 'gi');
-        html = html.replace(regex, `$1<span style="color:#0f0;font-weight:bold;">$2</span>`);
+        // 1. Try exact match
+        addRanges(word);
+        
+        // 2. If it's a phrase, try removing "one's", "sb's" etc.
+        if (word.includes(' ')) {
+            // Remove common placeholders
+            const cleaned = word.replace(/\b(one's|sb's|someone's|something|sth)\b/gi, '').replace(/\s+/g, ' ').trim();
+            if (cleaned !== word && cleaned.length > 3) {
+                addRanges(cleaned);
+            }
+            
+            // 3. Partial phrase matching (if word has > 2 parts, match any 2 consecutive parts?)
+            // Or just match the longest word in the phrase if it is long enough?
+            // Let's try to split by space and match consecutive segments if > 1 word
+            const parts = word.split(/\s+/).filter(p => p.length > 2 && !/^(one's|sb's|the|a|an|to|of|in)$/i.test(p));
+            if (parts.length > 1) {
+                // Try matching the whole sequence of parts with anything in between? No that's too loose.
+                // Just try matching each significant part? 
+                // The user said "partial match is okay". 
+                // Highlighting "eyes" and "flashed" separately might be noisy but acceptable.
+                // Better: try to find the longest contiguous sub-phrase that exists in text.
+                
+                // Let's just add ranges for significant parts for now, later merge will handle overlaps.
+                parts.forEach(p => addRanges(p));
+            }
+        }
     });
+
+    // Merge overlapping ranges
+    if (ranges.length === 0) return escapeHtml(text);
+
+    ranges.sort((a, b) => a.start - b.start);
+    
+    let merged = [];
+    let current = ranges[0];
+    
+    for (let i = 1; i < ranges.length; i++) {
+        let next = ranges[i];
+        if (next.start <= current.end) {
+            // Overlap or adjacent
+            current.end = Math.max(current.end, next.end);
+        } else {
+            merged.push(current);
+            current = next;
+        }
+    }
+    merged.push(current);
+
+    // Build HTML
+    let html = '';
+    let lastIdx = 0;
+    
+    merged.forEach(r => {
+        html += escapeHtml(text.substring(lastIdx, r.start));
+        html += `<span style="color:#0f0;font-weight:bold;">${escapeHtml(text.substring(r.start, r.end))}</span>`;
+        lastIdx = r.end;
+    });
+    html += escapeHtml(text.substring(lastIdx));
+    
     return html;
 }
 
